@@ -1,0 +1,70 @@
+package ru.netology.test;
+
+import com.codeborne.selenide.Selenide;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.*;
+import ru.netology.page.LoginPage;
+import static com.codeborne.selenide.Selenide.open;
+import static ru.netology.data.DataHelper.generateRandomVerificationCode;
+import static ru.netology.data.DataHelper.getRandomUser;
+import static ru.netology.data.SQLHelper.*;
+
+
+@Slf4j
+public class AuthTest {
+
+    LoginPage loginPage;
+
+    @BeforeEach
+    public void setup() {
+        loginPage = open("http://localhost:9999/", LoginPage.class);
+    }
+
+    @AfterAll
+    static void cleanAll() {
+        cleanDataBase();
+    }
+
+    @AfterEach
+    void cleanCode() {
+        cleanAuthCode();
+    }
+
+    @Test
+    @DisplayName("Валидная авторизация и верификация входа в ЛК")
+    public void shouldGetValidVerification() {
+        var verificationPage = loginPage.getValidLogin();
+        var verificationCode = getCode();
+        var dashBoardPage = verificationPage.validVerify(verificationCode);
+    }
+
+    @Test
+    @DisplayName("Отказ в верификации при неверном коде")
+    public void shouldInvalidVerificationCode() {
+        var verificationPage = loginPage.getValidLogin();
+        verificationPage.verify(generateRandomVerificationCode().getCode());
+        verificationPage.verifyErrorNotification("Ошибка! \nНеверно указан код! Попробуйте ещё раз.");
+    }
+
+    @Test
+    @DisplayName("Отказ в авторизации для отсутствующего пользователя")
+    public void shouldInvalidUser() {
+        loginPage.login(getRandomUser());
+        loginPage.verifyErrorNotification("Ошибка! \nНеверно указан логин или пароль");
+    }
+
+    @Test
+    @DisplayName("Превышение количества попыток ввода кода")
+    public void shouldExceededNumberCodeAttempts() {
+        var verificationPage = loginPage.getValidLogin();
+        int attempts = 4; // Увеличиваем количество попыток, чтобы убедиться, что превышаем лимит
+        for (int i = 0; i < attempts; i++) {
+            verificationPage.verify(generateRandomVerificationCode().getCode());
+            if (i < attempts - 1) {
+                open("http://localhost:9999/");
+                verificationPage = loginPage.getValidLogin();
+            }
+        }
+        verificationPage.verifyErrorNotification("Ошибка! \nПревышено количество попыток ввода кода!");
+    }
+}
