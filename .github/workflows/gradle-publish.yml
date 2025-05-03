@@ -1,6 +1,6 @@
 name: Java CI with Gradle
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
   build:
@@ -14,15 +14,18 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Container start
-        uses: hoverkraft-tech/compose-action@v2.0.1
-      - name: Waiting for сontainer start
-        run: sleep 30
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Start SUT
-        run: java -jar ./artifacts/app-deadline.jar -P:jdbc.url="jdbc:mysql://localhost:3306/app" -P:jdbc.user="app" -P:jdbc.password="pass" &
-             sleep 10
-      - name: Build with Gradle
 
+      - name: Container start
+        uses: hoverkraft-tech/compose-action@v2.0.1
+
+      - name: Waiting for сontainer start
+        run: sleep 30
+
+      - name: Start SUT
+        run: -jar ./artifacts/app-deadline.jar -P:jdbc.url="jdbc:mysql://localhost:3306/app" -P:jdbc.user="app" -P:jdbc.password="pass" &
+          sleep 10
+      - name: Build with Gradle
         run: ./gradlew test --info -Dselenide.headless=true
